@@ -96,7 +96,7 @@ const EMISchedule = () => {
                 </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-3 gap-8">
                 {/* Creation Form - Only for Admin */}
                 {user && user.role === 'Admin' && (
                     <motion.div
@@ -166,7 +166,7 @@ const EMISchedule = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
-                    className={user && user.role === 'Admin' ? "lg:col-span-1 xl:col-span-2" : "lg:col-span-2 xl:col-span-3"}
+                    className={user && user.role === 'Admin' ? "lg:col-span-1 xl:col-span-2" : "lg:col-span-1 xl:col-span-3"}
                 >
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         {user && user.role === 'Admin' ? (
