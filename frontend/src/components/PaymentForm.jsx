@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import AuthContext from '../context/AuthContext';
 import api from '../api';
 import { CreditCard, AlertCircle, Loader2, CheckCircle, User, Banknote } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 
 const PaymentForm = () => {
+    const { user } = useContext(AuthContext);
     const [amount, setAmount] = useState('');
     const [userId, setUserId] = useState('');
     const [loading, setLoading] = useState(false);
@@ -13,15 +15,23 @@ const PaymentForm = () => {
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
-        api.get('users/')
-            .then(res => setUsers(res.data))
-            .catch(err => console.error("Failed to fetch users", err));
+        if (user && user.role === 'Student') {
+            setUserId(user.user_id); // Assuming user object has user_id or id from jwt
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (user && user.role === 'Admin') {
+            api.get('users/')
+                .then(res => setUsers(res.data))
+                .catch(err => console.error("Failed to fetch users", err));
+        }
 
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
         document.body.appendChild(script);
-    }, []);
+    }, [user]);
 
     const handlePayment = async (e) => {
         e.preventDefault();
@@ -126,23 +136,25 @@ const PaymentForm = () => {
                     </AnimatePresence>
 
                     <form onSubmit={handlePayment} className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700 ml-1">Select Student</label>
-                            <div className="relative group">
-                                <User className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                                <select
-                                    value={userId}
-                                    onChange={(e) => setUserId(e.target.value)}
-                                    className="input-field pl-12 appearance-none"
-                                    required
-                                >
-                                    <option value="">Choose a student...</option>
-                                    {users.map(u => (
-                                        <option key={u.id} value={u.id}>{u.full_name}</option>
-                                    ))}
-                                </select>
+                        {user && user.role === 'Admin' && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-slate-700 ml-1">Select Student</label>
+                                <div className="relative group">
+                                    <User className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                                    <select
+                                        value={userId}
+                                        onChange={(e) => setUserId(e.target.value)}
+                                        className="input-field pl-12 appearance-none"
+                                        required
+                                    >
+                                        <option value="">Choose a student...</option>
+                                        {users.map(u => (
+                                            <option key={u.id} value={u.id}>{u.full_name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-slate-700 ml-1">Amount</label>

@@ -5,10 +5,10 @@ from django.utils import timezone
 from .models import User, EMISchedule, Payment, Rule
 from django.core.mail import send_mail
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import UserSerializer, EMIScheduleSerializer, PaymentSerializer, RuleSerializer
+from .serializers import UserSerializer, EMIScheduleSerializer, PaymentSerializer, RuleSerializer, UserRegistrationSerializer
 from .utils.rule_engine import evaluate_rules
 from .utils.rule_engine import evaluate_rules
 import razorpay
@@ -40,6 +40,16 @@ def user_list(request):
 @permission_classes([IsAuthenticated])
 def success_page(request):
     return Response({"message": "Operation Successful"}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_user(request):
+    serializer = UserRegistrationSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        if user:
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 def calculate_emi(total_loan, interest_rate, tenure_months):
     if interest_rate == 0:
@@ -104,10 +114,30 @@ def create_emi_schedule(request):
     serializer = EMIScheduleSerializer(schedules, many=True)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_emi_schedule(request):
+    if request.user.role == 'Admin':
+        user_id = request.query_params.get('user_id')
+        if user_id:
+             schedules = EMISchedule.objects.filter(user_id=user_id).order_by('next_due_date')
+        else:
+             schedules = EMISchedule.objects.all().order_by('next_due_date')
+    else:
+        schedules = EMISchedule.objects.filter(user=request.user).order_by('next_due_date')
+    
+    serializer = EMIScheduleSerializer(schedules, many=True)
+    return Response(serializer.data)
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def create_order(request):
     try:
-        user_id = request.data.get("user_id")
+        if request.user.role == 'Admin':
+             user_id = request.data.get("user_id")
+        else:
+             user_id = request.user.id
+        
         amount = request.data.get("amount")
 
         if not user_id or not amount:

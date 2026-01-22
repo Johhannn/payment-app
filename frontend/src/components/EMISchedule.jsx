@@ -21,7 +21,20 @@ const EMISchedule = () => {
                 .then(res => setUsers(res.data))
                 .catch(err => console.error(err));
         }
+        fetchSchedules();
     }, [user]);
+
+    const fetchSchedules = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('emi/list/');
+            setSchedules(res.data);
+        } catch (err) {
+            console.error("Failed to fetch schedules", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const createSchedule = async (e) => {
         e.preventDefault();
@@ -43,6 +56,29 @@ const EMISchedule = () => {
         }
     };
 
+    const [expandedUser, setExpandedUser] = useState(null);
+
+    // Group schedules by user
+    const groupedSchedules = schedules.reduce((acc, schedule) => {
+        const userId = schedule.user;
+        if (!acc[userId]) {
+            acc[userId] = {
+                userCheck: schedule.user_name || 'Unknown User',
+                schedules: []
+            };
+        }
+        acc[userId].schedules.push(schedule);
+        return acc;
+    }, {});
+
+    const toggleUser = (userId) => {
+        if (expandedUser === userId) {
+            setExpandedUser(null);
+        } else {
+            setExpandedUser(userId);
+        }
+    };
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -60,7 +96,7 @@ const EMISchedule = () => {
                 </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
                 {/* Creation Form - Only for Admin */}
                 {user && user.role === 'Admin' && (
                     <motion.div
@@ -130,57 +166,131 @@ const EMISchedule = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="lg:col-span-2"
+                    className={user && user.role === 'Admin' ? "lg:col-span-1 xl:col-span-2" : "lg:col-span-2 xl:col-span-3"}
                 >
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-slate-100">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Due Date</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-slate-50">
-                                    {schedules.map((s, i) => (
-                                        <motion.tr
-                                            key={i}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: i * 0.05 }}
-                                            className="hover:bg-slate-50/50 transition-colors"
+                        {user && user.role === 'Admin' ? (
+                            // Admin View: List of Users
+                            <div className="divide-y divide-slate-100">
+                                {Object.keys(groupedSchedules).length > 0 ? Object.entries(groupedSchedules).map(([uid, data]) => (
+                                    <div key={uid} className="bg-white">
+                                        <button
+                                            onClick={() => toggleUser(uid)}
+                                            className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
                                         >
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">
-                                                {new Date(s.next_due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">₹{parseFloat(s.emi_amount).toLocaleString()}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 gap-1">
-                                                    <CheckCircle className="h-3 w-3" /> Scheduled
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <button className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">View</button>
-                                            </td>
-                                        </motion.tr>
-                                    ))}
-                                    {schedules.length === 0 && (
-                                        <tr>
-                                            <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
-                                                <div className="flex flex-col items-center gap-3">
-                                                    <div className="p-3 bg-slate-50 rounded-full">
-                                                        <Calendar className="h-6 w-6 text-slate-300" />
-                                                    </div>
-                                                    <p>No schedules created yet.</p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                                                    {data.userCheck.charAt(0)}
                                                 </div>
-                                            </td>
+                                                <div className="text-left">
+                                                    <h4 className="text-sm font-bold text-slate-900">{data.userCheck}</h4>
+                                                    <p className="text-xs text-slate-500">{data.schedules.length} schedules</p>
+                                                </div>
+                                            </div>
+                                            {expandedUser === uid ? (
+                                                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6" /></svg>
+                                                </div>
+                                            ) : (
+                                                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                                                </div>
+                                            )}
+                                        </button>
+
+                                        {expandedUser === uid && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="border-t border-slate-100 bg-slate-50/50"
+                                            >
+                                                <div className="overflow-x-auto">
+                                                    <table className="min-w-full divide-y divide-slate-100">
+                                                        <thead className="bg-slate-50">
+                                                            <tr>
+                                                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Due Date</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-slate-50">
+                                                            {data.schedules.map((s, i) => (
+                                                                <tr key={i} className="hover:bg-slate-50">
+                                                                    <td className="px-6 py-3 whitespace-nowrap text-sm text-slate-700">
+                                                                        {new Date(s.next_due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                                    </td>
+                                                                    <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-slate-900">₹{parseFloat(s.emi_amount).toLocaleString()}</td>
+                                                                    <td className="px-6 py-3 whitespace-nowrap">
+                                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 gap-1">
+                                                                            <CheckCircle className="h-3 w-3" /> Scheduled
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </div>
+                                )) : (
+                                    <div className="p-12 text-center text-slate-400">
+                                        No schedules found.
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            // Student View: Simple Table
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-100">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Due Date</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-50">
+                                        {schedules.map((s, i) => (
+                                            <motion.tr
+                                                key={i}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: i * 0.05 }}
+                                                className="hover:bg-slate-50/50 transition-colors"
+                                            >
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">
+                                                    {new Date(s.next_due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">₹{parseFloat(s.emi_amount).toLocaleString()}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 gap-1">
+                                                        <CheckCircle className="h-3 w-3" /> Scheduled
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <button className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">View</button>
+                                                </td>
+                                            </motion.tr>
+                                        ))}
+                                        {schedules.length === 0 && (
+                                            <tr>
+                                                <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <div className="p-3 bg-slate-50 rounded-full">
+                                                            <Calendar className="h-6 w-6 text-slate-300" />
+                                                        </div>
+                                                        <p>No schedules created yet.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             </div>

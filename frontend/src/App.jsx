@@ -6,6 +6,7 @@ import EMISchedulePage from './pages/EMISchedulePage';
 import UserPage from './pages/UserPage';
 import HeroSection from './components/HeroSection';
 import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/" element={<HeroSection />} />
 
           <Route path="/payment" element={

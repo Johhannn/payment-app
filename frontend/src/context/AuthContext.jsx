@@ -37,6 +37,23 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const registerUser = async (email, password, full_name, phone_number) => {
+        try {
+            const response = await api.post('register/', {
+                email,
+                password,
+                full_name: full_name,
+                phone_number: phone_number
+            });
+            if (response.status === 201) {
+                return true;
+            }
+        } catch (error) {
+            console.error("Registration failed", error);
+            return false;
+        }
+    };
+
     const logoutUser = () => {
         setAuthTokens(null);
         setUser(null);
@@ -116,6 +133,7 @@ export const AuthProvider = ({ children }) => {
         user: user,
         authTokens: authTokens,
         loginUser: loginUser,
+        registerUser: registerUser,
         logoutUser: logoutUser,
         refreshToken: refreshToken,
     };
