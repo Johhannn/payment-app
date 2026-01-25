@@ -1,6 +1,0 @@
-<h2>{% if rule %}Edit{% else %}Add{% endif %} Rule</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
-</form>
